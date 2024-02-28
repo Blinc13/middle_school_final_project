@@ -1,0 +1,10 @@
+[package]
+name = "middle_school_final_project"
+license = "MIT"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+qubicon_vulkan = { git = "https://github.com/QubiconEngine/QubiconEngine" }
+qubicon_windowing = { git = "https://github.com/QubiconEngine/QubiconEngine" }
+qubicon_input_server = { git = "https://github.com/QubiconEngine/QubiconEngine" }
