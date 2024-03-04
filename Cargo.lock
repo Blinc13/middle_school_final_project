@@ -50,7 +50,7 @@ checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 [[package]]
 name = "keymaps"
 version = "0.1.0"
-source = "git+https://github.com/QubiconEngine/QubiconEngine#0637bc65897f17735df9b88b12c07646b9e53ca3"
+source = "git+https://github.com/QubiconEngine/QubiconEngine#cbf70d02cabae0c8c84a2487252e48b23539eeaf"
 
 [[package]]
 name = "libc"
@@ -106,7 +106,7 @@ dependencies = [
 [[package]]
 name = "qubicon_input_server"
 version = "0.0.0"
-source = "git+https://github.com/QubiconEngine/QubiconEngine#0637bc65897f17735df9b88b12c07646b9e53ca3"
+source = "git+https://github.com/QubiconEngine/QubiconEngine#cbf70d02cabae0c8c84a2487252e48b23539eeaf"
 dependencies = [
  "arrayvec",
  "bitvec",
@@ -117,7 +117,7 @@ dependencies = [
 [[package]]
 name = "qubicon_vulkan"
 version = "0.0.0"
-source = "git+https://github.com/QubiconEngine/QubiconEngine#0637bc65897f17735df9b88b12c07646b9e53ca3"
+source = "git+https://github.com/QubiconEngine/QubiconEngine#cbf70d02cabae0c8c84a2487252e48b23539eeaf"
 dependencies = [
  "arrayvec",
  "ash",
@@ -133,7 +133,7 @@ dependencies = [
 [[package]]
 name = "qubicon_vulkan_internal_macro"
 version = "0.0.0"
-source = "git+https://github.com/QubiconEngine/QubiconEngine#0637bc65897f17735df9b88b12c07646b9e53ca3"
+source = "git+https://github.com/QubiconEngine/QubiconEngine#cbf70d02cabae0c8c84a2487252e48b23539eeaf"
 dependencies = [
  "arrayvec",
  "proc-macro2",
@@ -144,7 +144,7 @@ dependencies = [
 [[package]]
 name = "qubicon_windowing"
 version = "0.0.0"
-source = "git+https://github.com/QubiconEngine/QubiconEngine#0637bc65897f17735df9b88b12c07646b9e53ca3"
+source = "git+https://github.com/QubiconEngine/QubiconEngine#cbf70d02cabae0c8c84a2487252e48b23539eeaf"
 dependencies = [
  "qubicon_vulkan",
  "smallstr",
