@@ -3,23 +3,36 @@ use std::sync::Arc;
 use qubicon_vulkan::{commands::command_buffers::{command_buffer_builder::{barrier::{AccessFlags, ImageMemoryBarrier, PipelineBarrierDependencyFlags}, copy::BufferCopy, PipelineBindPoint}, CommandBufferUsageFlags}, descriptors::alloc::descriptor_set::{BufferWriteInfo, DescriptorSet, DescriptorWrite, ImageWriteInfo}, instance::physical_device::memory_properties::MemoryTypeProperties, memory::{alloc::{hollow_device_memory_allocator::HollowDeviceMemoryAllocator, standart_device_memory_allocator::StandartMemoryAllocator}, resources::{buffer::{Buffer, BufferCreateInfo, BufferUsageFlags}, image::ImageLayout, image_view::{ImageAspect, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType}}, BufferRequest, BufferStagingBufferInfo}, queue::{PresentInfo, PresentInfoSwapchainEntry}, shaders::PipelineStageFlags, swapchain::AcquireImageSyncPrimitive, sync};
 use qubicon_windowing::x11::WindowEvent;
 
+use self::gpu_shared_data::VoxelData;
+
 use super::Application;
+
+mod gpu_shared_data;
+mod voxel_data_generator;
 
 impl Application {
     fn instantiate_resources(&mut self) -> (Buffer<StandartMemoryAllocator>, Buffer<StandartMemoryAllocator>, Arc<DescriptorSet>) {
+        let generated_tree = voxel_data_generator::generate_tree(3);
+
         let voxel_staging_buffer = self.vk_ctx.device.create_buffer(
             Arc::clone(&self.vk_ctx.allocator),
             MemoryTypeProperties::HOST_VISIBLE,
             &BufferCreateInfo {
                 usage_flags: BufferUsageFlags::TRANSFER_SRC,
-                size: 1024,
+                size: (core::mem::size_of::<VoxelData>() * generated_tree.len()) as u64,
                 main_owner_queue_family: self.vk_ctx.queue_family,
 
                 ..Default::default()
             }
         ).expect("failed to create staging buffer for voxel data");
 
-        // there should be buffer filling
+        unsafe {
+            voxel_staging_buffer.map::<VoxelData>()
+                .unwrap()
+                .iter_mut()
+                .zip(generated_tree.iter())
+                .for_each(| (dst, src) | { dst.write(*src); });
+        }
 
         let mut order = self.vk_ctx.resource_factory.create_order(Arc::clone(&self.vk_ctx.allocator))
             .unwrap();
@@ -29,7 +42,7 @@ impl Application {
             BufferRequest {
                 usage_flags: BufferUsageFlags::STORAGE_BUFFER,
                 create_flags: Default::default(),
-                size: 1024,
+                size: voxel_staging_buffer.size(),
                 main_owner_queue_family: self.vk_ctx.queue_family,
                 staging_buffer: Some(
                     BufferStagingBufferInfo {
