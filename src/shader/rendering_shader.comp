@@ -1,16 +1,254 @@
 #version 450
 
-layout (set = 0, binding = 0) uniform render_data {
-    int tmp_1;
+const uint WALK_DEPTH = 2;
+
+struct CameraData {
+    vec3 pos;
+    mat3 transform;
 };
-layout (set = 0, binding = 1) buffer voxel_data {
-    int tmp_2;
+
+struct VoxelData {
+    uint childs[8];
+    uint pallete_idx;
+};
+
+
+struct IntersectionData {
+    bool is_hit;
+    float dist;
+};
+
+
+IntersectionData ray2plain_intersection(in vec3 origin, in vec3 direction, in vec3 plain_normat, in float plain_dist_from_center) {
+    IntersectionData res;
+
+    float dt_dir = dot(direction, plain_normat);
+
+    if (dt_dir == 0.0) {
+        res.is_hit = false;
+        res.dist = 1.0 / 0.0;
+
+        return res;
+    }
+
+    float dt = dot(plain_normat, plain_normat * plain_dist_from_center - origin);
+
+    res.is_hit = true;
+    res.dist = dt / dt_dir;
+
+    return res;
+}
+
+bool is_point_inside_box(in vec3 point, in vec3 extents) {
+    return abs(point.x) <= extents.x && abs(point.y) <= extents.y && abs(point.z) <= extents.z;
+}
+
+IntersectionData ray2aab_intersection(in vec3 origin, in vec3 direction, in vec3 extents) {
+    IntersectionData results[6];
+
+    results[0] = ray2plain_intersection(origin, direction, vec3(-1.0, 0.0, 0.0), -extents.x);
+    results[1] = ray2plain_intersection(origin, direction, vec3(0.0, -1.0, 0.0), -extents.y);
+    results[2] = ray2plain_intersection(origin, direction, vec3(0.0, 0.0, -1.0), -extents.z);
+
+    results[3] = ray2plain_intersection(origin, direction, vec3(1.0, 0.0, 0.0), extents.x);
+    results[4] = ray2plain_intersection(origin, direction, vec3(0.0, 1.0, 0.0), extents.y);
+    results[5] = ray2plain_intersection(origin, direction, vec3(0.0, 0.0, 1.0), extents.z);
+
+
+
+    bool is_inside[6];
+
+    is_inside[0] = is_point_inside_box(origin + direction * results[0].dist, extents);
+    is_inside[1] = is_point_inside_box(origin + direction * results[1].dist, extents);
+    is_inside[2] = is_point_inside_box(origin + direction * results[2].dist, extents);
+
+    is_inside[3] = is_point_inside_box(origin + direction * results[3].dist, extents);
+    is_inside[4] = is_point_inside_box(origin + direction * results[4].dist, extents);
+    is_inside[5] = is_point_inside_box(origin + direction * results[5].dist, extents);
+
+
+    uint intersect_count = 0; // should be two
+
+    for (uint idx = 0; idx < 6; idx += 1) {
+        if (is_inside[idx]) {
+            intersect_count += 1;
+        }
+    }
+
+    
+
+    IntersectionData res;
+
+    if (intersect_count < 2) {
+        res.is_hit = false;
+        res.dist = 1.0 / 0.0;
+
+        return res;
+    }
+
+    float min_dist = min(
+        min(
+            min(
+                results[0].dist,
+                results[1].dist
+            ),
+            min(
+                results[2].dist,
+                results[3].dist
+            )
+        ),
+        min(
+            results[4].dist,
+            results[5].dist
+        )
+    );
+    // float max_dist = max(
+    //     max(
+    //         max(
+    //             results[0].dist,
+    //             results[1].dist
+    //         ),
+    //         max(
+    //             results[2].dist,
+    //             results[3].dist
+    //         ),
+    //     ),
+    //     max(
+    //         results[4].dist,
+    //         results[5].dist
+    //     )
+    // );
+
+    res.is_hit = true;
+    res.dist = min_dist;
+
+    return res;
+}
+
+
+layout (set = 0, binding = 0) uniform render_data_b {
+    CameraData cam_data;
+};
+layout (set = 0, binding = 1) buffer voxel_data_b {
+    VoxelData octree[];
 };
 layout (set = 0, binding = 2, rgba8) uniform image2D render_target;
+
+struct LayerIntersectionInfo {
+    // at max there will be only 3 intersections with cubes
+    uint intersection_count;
+
+    float dist[3];
+    uint child_index[3];
+    uint octree_index[3];
+};
+
+// TODO
+void sort_tiny_array(inout float cmp[3], inout uint idx[3], inout uint idx2[3], in uint len) {
+    // yes, bubble sort
+    for (uint i = 0; i < len; i += 1) {
+        for (uint j = 1; j < len; j += 1) {
+            if (cmp[j - 1] > cmp[j]) {
+                uint tmp_i = idx[j - 1];
+                uint tmp_i2 = idx2[j - 1];
+                float tmp_f = cmp[j - 1];
+
+
+                idx[j - 1] = idx[j];
+                idx2[j - 1] = idx2[j];
+                cmp[j - 1] = cmp[j];
+
+                idx[j] = tmp_i;
+                idx2[j] = tmp_i2;
+                cmp[j] = tmp_f;
+            } 
+        }
+    }
+}
+
+const vec3 OFFSETS[8] = {
+    vec3(-1.0, -1.0, -1.0),
+    vec3( 1.0, -1.0, -1.0),
+    vec3(-1.0, -1.0,  1.0),
+    vec3( 1.0, -1.0,  1.0),
+
+    vec3(-1.0,  1.0, -1.0),
+    vec3( 1.0,  1.0, -1.0),
+    vec3(-1.0,  1.0,  1.0),
+    vec3( 1.0,  1.0,  1.0)
+};
+
+LayerIntersectionInfo intersect_layer(in vec3 origin, in vec3 direction, in vec3 pos, in vec3 extent, in uint octree_index) {
+    origin -= pos; // now our current cube is at the center of the world!
+    extent /= 2.0;
+
+    // used to index intersection_data; should be less than 3
+    uint current_index = 0;
+    LayerIntersectionInfo intersection_data;
+
+    for (uint idx = 0; idx < 8; idx += 1) {
+        if (octree[octree_index].childs[idx] == 0) {
+            continue;
+        } 
+
+        // origin relative to child
+        vec3 child_origin = origin - OFFSETS[idx] * extent;
+
+        IntersectionData res = ray2aab_intersection(child_origin, direction, extent);
+
+        if (res.is_hit) {
+            intersection_data.dist[current_index] = res.dist;
+            intersection_data.child_index[current_index] = idx;
+            intersection_data.octree_index[current_index] = octree[ocrtee_index].childs[idx];
+
+            current_index += 1;
+        }
+    }
+
+    intersection_data.intersection_count = current_index;
+    sort_tiny_array(intersection_data.dist, intersection_data.child_index, intersection_data.octree_index, current_index);
+
+    return intersection_data;
+}
+
+// extents of root node should be all one. For next just divide each level by 2
+void tree_walk(in vec3 origin, in vec3 direction) {
+    uint indicies[WALK_DEPTH];
+    vec3 nodes_origin[WALK_DEPTH];
+    LayerIntersectionInfo walk_data[WALK_DEPTH];
+
+    nodes_origin[0] = vec3(0.0, 0.0, 0.0);
+    walk_data[0] = intersect_layer(origin, direction, positions[0], vec3(1.0, 1.0, 1.0), 0);
+
+    uint current_layer = 0;
+
+    while (true) {
+        if (current_layer == (WALK_DEPTH - 1)) {
+            break;gl
+        }
+        if (walk_data[current_layer].intersections_count == 0)) {
+            current_layer -= 1;
+        }
+
+        vec3 layer_extent = vec3(1.0, 1.0, 1.0) / (2.0 * current_layer);
+
+        nodes_origin[current_layer + 1] = nodes_origin[current_layer] - OFFSETS[ walk_data[current_layer].child_index[ indicies[current_layer] ] ] * layer_extent;
+        walk_data[current_layer + 1] = intersect_layer(
+            origin,
+            direction,
+            positions[current_layer + 1],
+            layer_extent,
+            walk_data[current_layer].child_index[ indicies[current_layer] ]
+        );
+
+        indicies[current_layer] += 1;
+        current_layer += 1;
+    }
+}
 
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
-    
+    tree_walk(vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0));
 }

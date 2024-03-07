@@ -16,8 +16,8 @@ pub struct CameraData {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VoxelData {
-    pub child_indicies: [u16; 8],
-    pub pallete_idx: u8
+    pub child_indicies: [u32; 8],
+    pub pallete_idx: u32
 }
 
 //unsafe impl MappableType for VoxelData {}
