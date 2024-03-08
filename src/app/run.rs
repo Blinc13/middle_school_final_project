@@ -3,7 +3,7 @@ use std::sync::Arc;
 use qubicon_vulkan::{commands::command_buffers::{command_buffer_builder::{barrier::{AccessFlags, ImageMemoryBarrier, PipelineBarrierDependencyFlags}, copy::BufferCopy, PipelineBindPoint}, CommandBufferUsageFlags}, descriptors::alloc::descriptor_set::{BufferWriteInfo, DescriptorSet, DescriptorWrite, ImageWriteInfo}, instance::physical_device::memory_properties::MemoryTypeProperties, memory::{alloc::{hollow_device_memory_allocator::HollowDeviceMemoryAllocator, standart_device_memory_allocator::StandartMemoryAllocator}, resources::{buffer::{Buffer, BufferCreateInfo, BufferUsageFlags}, image::ImageLayout, image_view::{ImageAspect, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType}}, BufferRequest, BufferStagingBufferInfo}, queue::{PresentInfo, PresentInfoSwapchainEntry}, shaders::PipelineStageFlags, swapchain::AcquireImageSyncPrimitive, sync};
 use qubicon_windowing::x11::WindowEvent;
 
-use self::gpu_shared_data::VoxelData;
+use self::gpu_shared_data::{CameraData, VoxelData};
 
 use super::Application;
 
@@ -68,7 +68,7 @@ impl Application {
             MemoryTypeProperties::HOST_VISIBLE,
             &BufferCreateInfo {
                 usage_flags: BufferUsageFlags::UNIFORM_BUFFER,
-                size: 1024,
+                size: core::mem::size_of::<CameraData>() as u64,
                 main_owner_queue_family: self.vk_ctx.queue_family,
 
                 ..Default::default()
@@ -110,6 +110,20 @@ impl Application {
         (uniform_buffer, voxel_buffer, descriptor_set)
     }
 
+    fn update_movement(&mut self, cam_data: &mut CameraData) {
+        self.input_server.update(| _ | {});
+
+        let move_vec = (
+            -self.input_server.get_action_force("move_left")     + self.input_server.get_action_force("move_right"),
+            -self.input_server.get_action_force("move_backward") + self.input_server.get_action_force("move_forward")
+        );
+
+        cam_data.pos.0 += move_vec.0;
+        cam_data.pos.2 += move_vec.1;
+
+        println!("{:?}", cam_data.pos);
+    }
+
     pub fn run(mut self) {
         let command_pool = self.vk_ctx.compute_queue.create_command_pool().unwrap();
         let (uniform_buffer, voxel_data_buffer, descriptor_set) = self.instantiate_resources();
@@ -119,6 +133,12 @@ impl Application {
             .show();
 
         'event_loop: loop {
+            unsafe {
+                let mut mapped = uniform_buffer.map::<CameraData>().unwrap();
+
+                self.update_movement(mapped[0].assume_init_mut())
+            }
+
             self.windowing_server.update();
 
             let mut window = self.windowing_server.window_mut(self.window_id)
@@ -216,7 +236,7 @@ impl Application {
                             ],
                             &[]
                         )
-                        .cmd_dispatch_unchecked(100, 100, 100)
+                        .cmd_dispatch_unchecked(600, 400, 1)
                         .cmd_pipeline_barrier_unchecked::<_, HollowDeviceMemoryAllocator>(
                             PipelineStageFlags::COMPUTE_SHADER,
                             PipelineStageFlags::BOTTOM_OF_PIPE,

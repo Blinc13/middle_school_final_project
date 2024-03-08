@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use qubicon_input_server::{keymaps::{Abs, Key}, ActionEventType, ActionInputEntry, LinuxInputServer};
-use qubicon_vulkan::{descriptors::{alloc::DescriptorPoolSize, DescriptorBinding, DescriptorPool, DescriptorPoolCreateInfo, DescriptorSetLayout, DescriptorSetLayoutCreateInfo, DescriptorType}, device::{create_info::{DeviceCreateInfo, QueueFamilyUsage}, Device}, instance::{creation_info::InstanceCreateInfo, physical_device::{queue_info::QueueFamilyCapabilities, PhysicalDevice}}, memory::{alloc::standart_device_memory_allocator::StandartMemoryAllocator, resources::{buffer::Buffer, image::{Image, ImageUsageFlags}}, ResourceFactory}, queue::Queue, shaders::{compute::{ComputePipeline, ComputePipelineCreateInfo}, pipeline_layout::PipelineLayout, PipelineShaderStageCreateInfo, ShaderStageFlags}, surface::{CompositeAlphaFlags, PresentMode, SurfaceTransformFlags}, Instance};
+use qubicon_vulkan::{descriptors::{alloc::DescriptorPoolSize, DescriptorBinding, DescriptorPool, DescriptorPoolCreateInfo, DescriptorSetLayout, DescriptorSetLayoutCreateInfo, DescriptorType}, device::{create_info::{DeviceCreateInfo, QueueFamilyUsage}, Device}, instance::{creation_info::InstanceCreateInfo, physical_device::{queue_info::QueueFamilyCapabilities, PhysicalDevice}}, memory::{alloc::standart_device_memory_allocator::StandartMemoryAllocator, resources::{buffer::Buffer, format::Format, image::{Image, ImageUsageFlags}}, ResourceFactory}, queue::Queue, shaders::{compute::{ComputePipeline, ComputePipelineCreateInfo}, pipeline_layout::PipelineLayout, PipelineShaderStageCreateInfo, ShaderStageFlags}, surface::{CompositeAlphaFlags, PresentMode, SurfaceTransformFlags}, Instance};
 use qubicon_windowing::{x11::{WindowId, WindowingServer}, AssociatedSwapchainCreateInfo};
 
 const SHADER_SRC: &[u8] = include_bytes!("shader/rendering_shader.spv");
@@ -147,7 +147,11 @@ impl Application {
             },
             | mode | mode == PresentMode::FIFO /* V-Sync */,
             // dont care
-            | _ | true
+            | f | {
+                println!("{f:?}");
+
+                true
+            }
         ).expect("failed to create window");
 
         (window_id, windowing_server)
@@ -293,6 +297,7 @@ impl VulkanContext {
 
         let (queue_family, device) = instance.enumerate_devices()
             .expect("failed to enumerate devices")
+            .filter(| dev | dev.get_properties().device_name.starts_with("AMD"))
             .filter_map(| dev | Some((Self::find_family(&dev, capabilitites, 2)?, dev)))
             .next()
             .expect("no matching Vulkan devices found");
