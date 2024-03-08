@@ -68,18 +68,19 @@ IntersectionData ray2aab_intersection(in vec3 origin, in vec3 direction, in vec3
 
 
     uint intersect_count = 0; // should be two
-    float min_dist = 0.0;//pow(10.0, 10); // just some random large value
+    float max_dist = 0.0;
 
     for (uint idx = 0; idx < 6; idx += 1) {
         if (is_inside[idx]) {
             intersect_count += 1;
-            min_dist = max( min_dist, results[idx].dist );
+            max_dist = max( max_dist, results[idx].dist );
         }
     } 
 
+
     IntersectionData res;
 
-    res.dist = min_dist;
+    res.dist = max_dist;
     res.is_hit = intersect_count >= 2;
 
     return res;
