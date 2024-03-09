@@ -68,19 +68,19 @@ IntersectionData ray2aab_intersection(in vec3 origin, in vec3 direction, in vec3
 
 
     uint intersect_count = 0; // should be two
-    float max_dist = 0.0;
+    float min_dist = pow(10.0, 100);
 
     for (uint idx = 0; idx < 6; idx += 1) {
         if (is_inside[idx]) {
             intersect_count += 1;
-            max_dist = max( max_dist, results[idx].dist );
+            min_dist = min( min_dist, results[idx].dist );
         }
     } 
 
 
     IntersectionData res;
 
-    res.dist = max_dist;
+    res.dist = min_dist;
     res.is_hit = intersect_count >= 2;
 
     return res;
@@ -269,8 +269,8 @@ void main() {
 
     vec4 color;
 
-    if (res.is_hit) {
-        color = vec4(res.dist, 0.0, 0.0, 1.0);
+    if (res.is_hit && res.dist > 0.0) {
+        color = vec4(100.0 / res.dist, 0.0, 0.0, 1.0);
     } else {
         color = vec4(0.0, 0.0, 0.0, 1.0);
     }
