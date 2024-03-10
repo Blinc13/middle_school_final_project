@@ -1,6 +1,7 @@
 #version 450
 
 const uint WALK_DEPTH = 3;
+const uint MIPE = 4; // max intersections per layer
 
 struct CameraData {
     vec3 pos;
@@ -96,16 +97,14 @@ layout (set = 0, binding = 1) buffer voxel_data_b {
 layout (set = 0, binding = 2, rgba8) uniform image2D render_target;
 
 struct LayerIntersectionInfo {
-    // at max there will be only 3 intersections with cubes
     uint intersection_count;
 
-    float dist[3];
-    uint child_index[3];
-    uint octree_index[3];
+    float dist[MIPE];
+    uint child_index[MIPE];
+    uint octree_index[MIPE];
 };
 
-// TODO
-void sort_tiny_array(inout float cmp[3], inout uint idx[3], inout uint idx2[3], in uint len) {
+void sort_tiny_array(inout float cmp[MIPE], inout uint idx[MIPE], inout uint idx2[MIPE], in uint len) {
     // yes, bubble sort
     for (uint i = 0; i < len; i += 1) {
         for (uint j = 1; j < len; j += 1) {
@@ -143,7 +142,6 @@ LayerIntersectionInfo intersect_layer(in vec3 origin, in vec3 direction, in vec3
     origin -= pos; // now our current cube is at the center of the world!
     extent /= 2.0;
 
-    // used to index intersection_data; should be less than 3
     uint current_index = 0;
     LayerIntersectionInfo intersection_data;
 
@@ -174,38 +172,51 @@ LayerIntersectionInfo intersect_layer(in vec3 origin, in vec3 direction, in vec3
 
 IntersectionData tree_walk(in vec3 origin, in vec3 direction) {
     LayerIntersectionInfo walk_data[WALK_DEPTH];
+    
+    walk_data[0] = intersect_layer(origin, direction, vec3(0.0), vec3(1.0), 0);
+    walk_data[1] = intersect_layer(origin, direction, OFFSETS[ walk_data[0].child_index[0] ] * 0.5, vec3(0.5), walk_data[0].octree_index[0]);
+
+    IntersectionData res;
+
+    res.is_hit = walk_data[1].intersection_count > 0;
+    res.dist = walk_data[1].dist[0];
+
+    return res;
+}
+
+IntersectionData actual_tree_walk(in vec3 origin, in vec3 direction) {
+    LayerIntersectionInfo walk_data[WALK_DEPTH];
+
     walk_data[0] = intersect_layer(origin, direction, vec3(0.0), vec3(1.0), 0);
 
     for (uint i = 0; i < walk_data[0].intersection_count; i += 1) {
-        vec3 i_pos = vec3(0.0) + OFFSETS[ walk_data[0].child_index[i] ];
-        
+        vec3 i_pos = OFFSETS[ walk_data[0].child_index[i] ] * 0.5;
+
         walk_data[1] = intersect_layer(
             origin,
             direction,
             i_pos,
             vec3(0.5),
-            walk_data[0].octree_index[ i ]
+            walk_data[0].octree_index[i]
         );
 
-        for (uint j = 0; j < walk_data[1].intersection_count; i += 1) {
-            vec3 j_pos = i_pos + OFFSETS[ walk_data[1].child_index[ j ] ] * 0.5;
-
+        for (uint j = 0; j < walk_data[1].intersection_count; j += 1) {
+            vec3 j_pos = i_pos + OFFSETS[ walk_data[1].child_index[j] ] * 0.25;
+            
             walk_data[2] = intersect_layer(
                 origin,
                 direction,
                 j_pos,
-                vec3(0.5 / 2.0),
-                walk_data[1].octree_index[ j ]
+                vec3(0.25),
+                walk_data[1].octree_index[j]
             );
 
-            if (walk_data[2].intersection_count > 0) {
-                IntersectionData res;
+            IntersectionData res;
 
-                res.is_hit = true;
-                res.dist = walk_data[2].dist[0];
+            res.is_hit = walk_data[2].intersection_count > 0;
+            res.dist = walk_data[2].dist[0];
 
-                return res;
-            }
+            return res;
         }
     }
 
@@ -263,17 +274,33 @@ void main() {
     vec3 direction = normalize( vec3(ray_cord, 1.0) );
     vec3 origin = cam_data.pos;
 
-    vec3 extents = vec3(1.0);
-
-    IntersectionData res = ray2aab_intersection(origin, direction, extents);
+    //IntersectionData res = actual_tree_walk(origin, direction);
+    LayerIntersectionInfo res = intersect_layer(origin, direction, vec3(0.0, 0.0, 0.0), vec3(1.0), 0);
 
     vec4 color;
 
-    if (res.is_hit && res.dist > 0.0) {
-        color = vec4(100.0 / res.dist, 0.0, 0.0, 1.0);
+    // if (res.is_hit) {
+    //    color = vec4(7.0 / res.dist, 0.0, 0.0, 1.0);
+    // } else {
+    //    color = vec4(0.0, 0.0, 0.0, 1.0);
+    // }
+
+    if (res.intersection_count > 0) {
+        LayerIntersectionInfo res2 = intersect_layer(
+            origin,
+            direction,
+            OFFSETS[ res.child_index[0] ] * 0.5,
+            vec3(0.5),
+            0
+        );
+
+        color = vec4(float(res.child_index[0]) / 7.0, float(res2.child_index[0]) / 7.0, 0.0, 1.0);
     } else {
         color = vec4(0.0, 0.0, 0.0, 1.0);
     }
+    
+    //color = vec4(float(res.intersection_count) / 3.0, 100.0 / res.dist[0], 0.0, 1.0);
+    //color = vec4(float(res.child_index[0]) / 8.0, float(res.child_index[1]) / 8.0, float(res.child_index[2]) / 8.0, 1.0);
 
     imageStore(render_target, ivec2(int(pixel_coord.x), int(pixel_coord.y)), color);
 }

@@ -51,7 +51,7 @@ impl Application {
                             BufferCopy {
                                 src_offset: 0,
                                 dst_offset: 0,
-                                size: 1024
+                                size: voxel_staging_buffer.size()
                             }
                         ]
                     }
