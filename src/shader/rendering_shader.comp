@@ -274,30 +274,30 @@ void main() {
     vec3 direction = normalize( vec3(ray_cord, 1.0) );
     vec3 origin = cam_data.pos;
 
-    //IntersectionData res = actual_tree_walk(origin, direction);
-    LayerIntersectionInfo res = intersect_layer(origin, direction, vec3(0.0, 0.0, 0.0), vec3(1.0), 0);
+    IntersectionData res = actual_tree_walk(origin, direction);
+    //LayerIntersectionInfo res = intersect_layer(origin, direction, vec3(0.0, 0.0, 0.0), vec3(1.0), 0);
 
     vec4 color;
 
-    // if (res.is_hit) {
-    //    color = vec4(7.0 / res.dist, 0.0, 0.0, 1.0);
-    // } else {
-    //    color = vec4(0.0, 0.0, 0.0, 1.0);
-    // }
-
-    if (res.intersection_count > 0) {
-        LayerIntersectionInfo res2 = intersect_layer(
-            origin,
-            direction,
-            OFFSETS[ res.child_index[0] ] * 0.5,
-            vec3(0.5),
-            res.octree_index [ 0 ]
-        );
-
-        color = vec4(float(res.child_index[0]) / 7.0, float(res2.child_index[0]) / 7.0, 0.0, 1.0);
+    if (res.is_hit) {
+       color = vec4(7.0 / res.dist, 0.0, 0.0, 1.0);
     } else {
-        color = vec4(0.0, 0.0, 0.0, 1.0);
+       color = vec4(0.0, 0.0, 0.0, 1.0);
     }
+
+    // if (res.intersection_count > 0) {
+    //     LayerIntersectionInfo res2 = intersect_layer(
+    //         origin,
+    //         direction,
+    //         OFFSETS[ res.child_index[0] ] * 0.5,
+    //         vec3(0.5),
+    //         res.octree_index [ 0 ]
+    //     );
+
+    //     color = vec4(float(res.child_index[0]) / 7.0, float(res2.child_index[0]) / 7.0, 0.0, 1.0);
+    // } else {
+    //     color = vec4(0.0, 0.0, 0.0, 1.0);
+    // }
     
     //color = vec4(float(res.intersection_count) / 3.0, 100.0 / res.dist[0], 0.0, 1.0);
     //color = vec4(float(res.child_index[0]) / 8.0, float(res.child_index[1]) / 8.0, float(res.child_index[2]) / 8.0, 1.0);

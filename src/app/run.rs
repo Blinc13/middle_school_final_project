@@ -12,7 +12,7 @@ mod voxel_data_generator;
 
 impl Application {
     fn instantiate_resources(&mut self) -> (Buffer<StandartMemoryAllocator>, Buffer<StandartMemoryAllocator>, Arc<DescriptorSet>) {
-        let generated_tree = voxel_data_generator::generate_tree(3);
+        let generated_tree = voxel_data_generator::generate_tree(4);
 
         let voxel_staging_buffer = self.vk_ctx.device.create_buffer(
             Arc::clone(&self.vk_ctx.allocator),
