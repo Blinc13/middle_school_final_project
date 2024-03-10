@@ -5,6 +5,9 @@ pub fn generate_tree(layer_count: u8) -> Vec<VoxelData> {
 
     generate_tree_layer_rec(&mut dst, 0, layer_count);
 
+    println!("{:?}", dst[0]);
+    println!("{:?}", dst[37]);
+
     dst
 }
 
@@ -22,6 +25,7 @@ fn generate_tree_layer_rec(dst: &mut Vec<VoxelData>, layer_idx: u8, max_layer: u
     dst[data_index].child_indicies[1] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;
     dst[data_index].child_indicies[2] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;
     dst[data_index].child_indicies[3] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;
+
     dst[data_index].child_indicies[4] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;
     dst[data_index].child_indicies[5] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;
     dst[data_index].child_indicies[6] = generate_tree_layer_rec(dst, layer_idx + 1, max_layer).max(0) as u32;

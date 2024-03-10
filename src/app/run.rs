@@ -91,7 +91,7 @@ impl Application {
                         write_info: BufferWriteInfo {
                             buffer: &uniform_buffer,
                             offset: 0,
-                            len: 1024
+                            len: uniform_buffer.size()
                         }
                     },
                     DescriptorWrite {
@@ -100,7 +100,7 @@ impl Application {
                         write_info: BufferWriteInfo {
                             buffer: &voxel_buffer,
                             offset: 0,
-                            len: 1024
+                            len: voxel_buffer.size()
                         }
                     }
                 ]

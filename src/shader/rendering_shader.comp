@@ -291,7 +291,7 @@ void main() {
             direction,
             OFFSETS[ res.child_index[0] ] * 0.5,
             vec3(0.5),
-            0
+            res.octree_index [ 0 ]
         );
 
         color = vec4(float(res.child_index[0]) / 7.0, float(res2.child_index[0]) / 7.0, 0.0, 1.0);
