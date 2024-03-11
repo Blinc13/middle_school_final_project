@@ -5,6 +5,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+nalgebra = "0.32"
+
 qubicon_vulkan = { git = "https://github.com/QubiconEngine/QubiconEngine" }
 qubicon_windowing = { git = "https://github.com/QubiconEngine/QubiconEngine" }
 qubicon_input_server = { git = "https://github.com/QubiconEngine/QubiconEngine" }

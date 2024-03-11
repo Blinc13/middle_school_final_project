@@ -5,9 +5,6 @@ pub fn generate_tree(layer_count: u8) -> Vec<VoxelData> {
 
     generate_tree_layer_rec(&mut dst, 0, layer_count);
 
-    println!("{:?}", dst[0]);
-    println!("{:?}", dst[37]);
-
     dst
 }
 

@@ -61,7 +61,7 @@ impl Application {
             [
                 ActionInputEntry {
                     device_id: None,
-                    r#type: ActionEventType::Abs { abs: Abs::LY, range: 0.0..1.01 },
+                    r#type: ActionEventType::Abs { abs: Abs::LY, range: -1.01..0.0 },
                 },
                 ActionInputEntry {
                     device_id: None,
@@ -74,7 +74,7 @@ impl Application {
             [
                 ActionInputEntry {
                     device_id: None,
-                    r#type: ActionEventType::Abs { abs: Abs::LY, range: -1.1..0.0 },
+                    r#type: ActionEventType::Abs { abs: Abs::LY, range: 0.0..1.01 },
                 },
                 ActionInputEntry {
                     device_id: None,
@@ -108,7 +108,7 @@ impl Application {
             [
                 ActionInputEntry {
                     device_id: None,
-                    r#type: ActionEventType::Abs { abs: Abs::RY, range: 0.0..1.01 }
+                    r#type: ActionEventType::Abs { abs: Abs::RY, range: -1.01..0.0 }
                 }
             ]
         );
@@ -117,7 +117,7 @@ impl Application {
             [
                 ActionInputEntry {
                     device_id: None,
-                    r#type: ActionEventType::Abs { abs: Abs::RY, range: -1.01..0.0 }
+                    r#type: ActionEventType::Abs { abs: Abs::RY, range: 0.0..1.01 }
                 }
             ]
         );
@@ -297,7 +297,7 @@ impl VulkanContext {
 
         let (queue_family, device) = instance.enumerate_devices()
             .expect("failed to enumerate devices")
-            //.filter(| dev | dev.get_properties().device_name.starts_with("AMD"))
+            .filter(| dev | dev.get_properties().device_name.starts_with("AMD"))
             .filter_map(| dev | Some((Self::find_family(&dev, capabilitites, 2)?, dev)))
             .next()
             .expect("no matching Vulkan devices found");

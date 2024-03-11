@@ -7,6 +7,7 @@ use self::gpu_shared_data::{CameraData, VoxelData};
 
 use super::Application;
 
+mod camera;
 mod gpu_shared_data;
 mod voxel_data_generator;
 
@@ -65,7 +66,7 @@ impl Application {
 
         let uniform_buffer = self.vk_ctx.device.create_buffer(
             Arc::clone(&self.vk_ctx.allocator),
-            MemoryTypeProperties::HOST_VISIBLE,
+            MemoryTypeProperties::HOST_VISIBLE | MemoryTypeProperties::HOST_COHERENT,
             &BufferCreateInfo {
                 usage_flags: BufferUsageFlags::UNIFORM_BUFFER,
                 size: core::mem::size_of::<CameraData>() as u64,
@@ -110,33 +111,42 @@ impl Application {
         (uniform_buffer, voxel_buffer, descriptor_set)
     }
 
-    fn update_movement(&mut self, cam_data: &mut CameraData) {
+    fn update_movement(&mut self, cam_data: &mut camera::CamBasis) {
         self.input_server.update(| _ | {});
 
-        let move_vec = (
+        let move_vec = camera::Vec3::new(
             -self.input_server.get_action_force("move_left")     + self.input_server.get_action_force("move_right"),
+            0.0,
             -self.input_server.get_action_force("move_backward") + self.input_server.get_action_force("move_forward")
         );
+        let rotate_vec = camera::Vec2::new(
+            -self.input_server.get_action_force("rotate_left") + self.input_server.get_action_force("rotate_right"),
+            -self.input_server.get_action_force("rotate_down") + self.input_server.get_action_force("rotate_up")
+        );
 
-        cam_data.pos.0 += move_vec.0;
-        cam_data.pos.2 += move_vec.1;
+        cam_data.translate( cam_data.as_basis_mat() * move_vec * 0.1 );
 
-        println!("{:?}", cam_data.pos);
+        cam_data.rotate(camera::Vec3::new(0.0, 1.0, 0.0), rotate_vec.x * 0.05);
+        cam_data.rotate(cam_data.x, rotate_vec.y * 0.05);
     }
 
     pub fn run(mut self) {
         let command_pool = self.vk_ctx.compute_queue.create_command_pool().unwrap();
-        let (uniform_buffer, voxel_data_buffer, descriptor_set) = self.instantiate_resources();
+        let (uniform_buffer, _voxel_data_buffer, descriptor_set) = self.instantiate_resources();
+
+        let mut camera = camera::CamBasis::default();
 
         self.windowing_server.window_mut(self.window_id)
             .unwrap()
             .show();
 
         'event_loop: loop {
+            self.update_movement(&mut camera);
+
             unsafe {
                 let mut mapped = uniform_buffer.map::<CameraData>().unwrap();
 
-                self.update_movement(mapped[0].assume_init_mut())
+                mapped[0].write(camera.build_camera_data());
             }
 
             self.windowing_server.update();
