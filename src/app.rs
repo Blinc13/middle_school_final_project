@@ -297,7 +297,7 @@ impl VulkanContext {
 
         let (queue_family, device) = instance.enumerate_devices()
             .expect("failed to enumerate devices")
-            .filter(| dev | dev.get_properties().device_name.starts_with("AMD"))
+            //.filter(| dev | dev.get_properties().device_name.starts_with("AMD"))
             .filter_map(| dev | Some((Self::find_family(&dev, capabilitites, 2)?, dev)))
             .next()
             .expect("no matching Vulkan devices found");

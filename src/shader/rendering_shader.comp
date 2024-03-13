@@ -82,7 +82,7 @@ IntersectionData ray2aab_intersection(in vec3 origin, in vec3 direction, in vec3
     IntersectionData res;
 
     res.dist = min_dist;
-    res.is_hit = intersect_count >= 2;
+    res.is_hit = intersect_count > 0;
 
     return res;
 }
@@ -215,12 +215,14 @@ IntersectionData actual_tree_walk(in vec3 origin, in vec3 direction) {
                 walk_data[1].octree_index[j]
             );
 
-            IntersectionData res;
+            if (walk_data[2].intersection_count > 0) {
+                IntersectionData res;
 
-            res.is_hit = walk_data[2].intersection_count > 0;
-            res.dist = walk_data[2].dist[0];
+                res.is_hit = true;
+                res.dist = walk_data[2].dist[0];
 
-            return res;
+                return res;
+            }
         }
     }
 
@@ -284,7 +286,7 @@ void main() {
     vec4 color;
 
     if (res.is_hit) {
-       color = vec4(7.0 / res.dist, 0.0, 0.0, 1.0);
+       color = vec4(3.0 / res.dist, 0.0, 0.0, 1.0);
     } else {
        color = vec4(0.0, 0.0, 0.0, 1.0);
     }
