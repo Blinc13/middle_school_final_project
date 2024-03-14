@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use qubicon_vulkan::{commands::command_buffers::{command_buffer_builder::{barrier::{AccessFlags, ImageMemoryBarrier, PipelineBarrierDependencyFlags}, copy::BufferCopy, PipelineBindPoint}, CommandBufferUsageFlags}, descriptors::alloc::descriptor_set::{BufferWriteInfo, DescriptorSet, DescriptorWrite, ImageWriteInfo}, instance::physical_device::memory_properties::MemoryTypeProperties, memory::{alloc::{hollow_device_memory_allocator::HollowDeviceMemoryAllocator, standart_device_memory_allocator::StandartMemoryAllocator}, resources::{buffer::{Buffer, BufferCreateInfo, BufferUsageFlags}, image::ImageLayout, image_view::{ImageAspect, ImageSubresourceRange, ImageViewCreateInfo, ImageViewType}}, BufferRequest, BufferStagingBufferInfo}, queue::{PresentInfo, PresentInfoSwapchainEntry}, shaders::PipelineStageFlags, swapchain::AcquireImageSyncPrimitive, sync};
 use qubicon_windowing::x11::WindowEvent;
@@ -10,6 +10,8 @@ use super::Application;
 mod camera;
 mod gpu_shared_data;
 mod voxel_data_generator;
+
+const MOVE_SPEED_MULTIPLIER: f32 = 2.0;
 
 impl Application {
     fn instantiate_resources(&mut self) -> (Buffer<StandartMemoryAllocator>, Buffer<StandartMemoryAllocator>, Arc<DescriptorSet>) {
@@ -111,7 +113,7 @@ impl Application {
         (uniform_buffer, voxel_buffer, descriptor_set)
     }
 
-    fn update_movement(&mut self, cam_data: &mut camera::CamBasis) {
+    fn update_movement(&mut self, delta: f32, cam_data: &mut camera::CamBasis) {
         self.input_server.update(| _ | {});
 
         let move_vec = camera::Vec3::new(
@@ -124,24 +126,27 @@ impl Application {
             -self.input_server.get_action_force("rotate_down") + self.input_server.get_action_force("rotate_up")
         );
 
-        cam_data.translate( cam_data.as_basis_mat() * move_vec * 0.1 );
+        cam_data.translate( cam_data.as_basis_mat() * move_vec * MOVE_SPEED_MULTIPLIER * delta );
 
-        cam_data.rotate(camera::Vec3::new(0.0, 1.0, 0.0), rotate_vec.x * 0.05);
-        cam_data.rotate(cam_data.x, rotate_vec.y * 0.05);
+        cam_data.rotate(camera::Vec3::new(0.0, 1.0, 0.0), rotate_vec.x * MOVE_SPEED_MULTIPLIER * delta);
+        cam_data.rotate(cam_data.x, rotate_vec.y * MOVE_SPEED_MULTIPLIER * delta);
     }
 
     pub fn run(mut self) {
         let command_pool = self.vk_ctx.compute_queue.create_command_pool().unwrap();
         let (uniform_buffer, _voxel_data_buffer, descriptor_set) = self.instantiate_resources();
 
+        let mut delta = 0.0;
         let mut camera = camera::CamBasis::default();
 
         self.windowing_server.window_mut(self.window_id)
             .unwrap()
             .show();
 
+        let mut time = Instant::now();
+
         'event_loop: loop {
-            self.update_movement(&mut camera);
+            self.update_movement(delta, &mut camera);
 
             unsafe {
                 let mut mapped = uniform_buffer.map::<CameraData>().unwrap();
@@ -302,6 +307,13 @@ impl Application {
                         }
                     );
                 }
+            }
+
+            {
+                let current_time = Instant::now();
+                
+                delta = current_time.duration_since(time).as_secs_f32();
+                time = current_time;
             }
         }
     }

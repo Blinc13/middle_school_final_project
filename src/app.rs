@@ -145,13 +145,9 @@ impl Application {
                 clipped: false,
                 image_main_owner_queue_family: vk_ctx.queue_family
             },
-            | mode | mode == PresentMode::FIFO /* V-Sync */,
+            | mode | mode == PresentMode::Immediate /* V-Sync */,
             // dont care
-            | f | {
-                println!("{f:?}");
-
-                true
-            }
+            | f | true
         ).expect("failed to create window");
 
         (window_id, windowing_server)
